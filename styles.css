@@ -1,0 +1,20 @@
+.gawdp_flex-container {
+	display: flex;
+	flex-direction: column;
+	max-width: 500px;
+}
+
+.gawdp_flex-item {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.gawdp_input-label {
+	margin-bottom: 0.5rem;
+}
+
+.gawdp_inputField {
+	flex: 1;
+	margin-bottom: 1rem;
+}
