@@ -1,4 +1,4 @@
-# Github Actions Webhook Deploy Plugin
+# Deploy Webhook Github Actions Plugin
 
 A WordPress plugin to manually trigger a deploy workflow via the Github Actions REST API after updating content.
 
