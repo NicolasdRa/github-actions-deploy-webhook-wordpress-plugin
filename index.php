@@ -25,7 +25,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 defined('ABSPATH') or die('You do not have access to this file');
 
 
@@ -38,56 +37,52 @@ add_action('admin_init', array($this, 'manageSettings'));
 // registers settings variables
 function manageSettings() {
 add_settings_section('github-actions-deploy-webhook-settings-section', null, null, 'github-actions-deploy-webhook-settings-page'); 
-register_setting( 'GADW_webhook-settings', 'GADW_owner', array('sanitize_callback'=> 'sanitize_text_field', 'default' => ''));
-add_settings_field('GADW_owner', 'Owner', array($this,'ownerInputHTML'), 'github-actions-deploy-webhook-settings-page', 'github-actions-deploy-webhook-settings-section');
 
-register_setting( 'GADW_webhook-settings', 'GADW_repo', array('sanitize_callback'=> 'sanitize_text_field', 'default' => ''));
-add_settings_field('GADW_repo', 'Repository', array($this,'repoInputHTML'), 'github-actions-deploy-webhook-settings-page', 'github-actions-deploy-webhook-settings-section');
+$settingsFields = array(
+ array(
+ 'name' => 'GADW_owner',
+ 'label' => 'OWNER:',
+ ),
 
-register_setting( 'GADW_webhook-settings', 'GADW_workflow_id', array('sanitize_callback'=> 'sanitize_text_field', 'default' => ''));
-add_settings_field('GADW_workflow_id', 'Workflow ID', array($this,'workflowIdInputHTML'), 'github-actions-deploy-webhook-settings-page', 'github-actions-deploy-webhook-settings-section');
+ array(
+ 'name' => 'GADW_repo',
+ 'label' => 'REPO:',
+ ),
 
-register_setting( 'GADW_webhook-settings', 'GADW_access_token', array('sanitize_callback'=> 'sanitize_text_field', 'default' => ''));
-add_settings_field('GADW_access_token', 'Access Token', array($this,'accessTokenInputHTML'), 'github-actions-deploy-webhook-settings-page', 'github-actions-deploy-webhook-settings-section');
+ array(
+ 'name' => 'GADW_workflow_id',
+ 'label' => 'WORKFLOW ID:',
+ ),
 
-register_setting( 'GADW_webhook-settings', 'GADW_ref', array('sanitize_callback'=> 'sanitize_text_field', 'default' => ''));
-add_settings_field('GADW_ref', 'Trigger Event Name', array($this,'refInputHTML'), 'github-actions-deploy-webhook-settings-page', 'github-actions-deploy-webhook-settings-section');
+ array(
+ 'name' => 'GADW_access_token',
+ 'label' => 'PERSONAL ACCESS TOKEN:',
+ ),
+
+ array(
+ 'name' => 'GADW_ref',
+ 'label' => 'REF:',
+ ),
+);
+
+ // creates fields html
+function renderFieldHtml($arg) {
+ $data = get_option($arg['name']);
+  echo "<input type='text' name='{$arg['name']}' id='{$arg['name']}' value='$data' />";
 }
 
-// renders the owner input field
-function ownerInputHTML() {
-$owner = get_option('GADW_owner');
-echo "<input type='text' name='GADW_owner' value='$owner' />";
+// builds field Html, registers settings & adds fields
+foreach ($settingsFields as $field) {
+  register_setting( 'GADW_webhook-settings', $field['name'], array('sanitize_callback'=> 'sanitize_text_field', 'default' => ''));
+  add_settings_field($field['name'], $field['label'], 'renderFieldHtml', 'github-actions-deploy-webhook-settings-page', 'github-actions-deploy-webhook-settings-section', $field);
 }
 
-// renders the repo input field
-function repoInputHTML() {
-$repo = get_option('GADW_repo');
-echo "<input type='text' name='GADW_repo' value='$repo' />";
-}
-
-// renders the workflow id input field
-function workflowIdInputHTML() {
-$workflowId = get_option('GADW_workflow_id');
-echo "<input type='text' name='GADW_workflow_id' value='$workflowId' />";
-}
-
-// renders the access token input field
-function accessTokenInputHTML() {
-$accessToken = get_option('GADW_access_token');
-echo "<input type='text' name='GADW_access_token' value='$accessToken' />";
-}
-
-// renders the trigger event name input field
-function refInputHTML() {
-$ref = get_option('GADW_ref');
-echo "<input type='text' name='GADW_ref' value='$ref' />";
 }
 
 // creates the top level menu and submenus
 function makeTopLevelMenu() {
 $documentTitle = 'Github Actions Deploy Webhook';
-$menuLabel = 'Deploy Site';
+$menuLabel = 'GA Deploy';
 $capability = 'manage_options';
 $menuSlug = 'github-actions-deploy-webhook';
 $mainPageHTML = array($this, 'mainPageHTML');
@@ -114,14 +109,20 @@ wp_enqueue_style('deployPluginCss', plugin_dir_url(__FILE__) . 'styles.css');
 // submits a POST request to the Github Actions webhook
 function handleSubmitDeploy() {
 
-  if (isset($_POST['hookNonce']) && wp_verify_nonce($_POST['hookNonce'], 'postWebHook') && current_user_can('manage_options')) {
+  // check user capabilities
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+ // check if nonce is set and valid before processing form data
+  if (isset($_POST['hookNonce']) && wp_verify_nonce($_POST['hookNonce'], 'postWebHook')) {
  
-// Replace these placeholders with actual values
+// get the form data
 $owner = get_option('GADW_owner');
 $repo = get_option('GADW_repo');
 $workflow_id = get_option('GADW_workflow_id');
 $pat = get_option('GADW_access_token');
-$ref = 'main';
+$ref = get_option('GADW_ref');;
 
 // Build the API URL
 $url = "https://api.github.com/repos/$owner/$repo/actions/workflows/$workflow_id/dispatches";
@@ -154,13 +155,20 @@ $response_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
 // Check the response code
 if ($response_code == 204) {
-  // Success!
-  echo "Workflow triggered successfully.\n";
+   // Success!
+ ?>
+<div class="notice notice-success">
+ <p>"Workflow triggered successfully.</p>
+</div>
+<?php
 } else {
   // Error
-  echo "Error triggering workflow.\n";
-  echo "Response code: $response_code\n";
-  echo "Response body: $response\n";
+ ?>
+<div class="notice notice-error">
+ <p><strong>Error triggering workflow.</strong></p>
+ <p><?php echo "Response code: $response_code."; ?> <?php echo "Response body: $response\n"; ?></p>
+</div>
+<?php
 }
 
 // Clean up
@@ -209,15 +217,37 @@ function mainPageHTML() {
 
 // handles the saving of the webhook url to the database
 function handleSubmitSaveOptions() {
- if (isset($_POST['hookNonce']) && wp_verify_nonce($_POST['hookNonce'], 'saveUrlWebHook') && current_user_can('manage_options')) {
- 
-   update_option('github-actions-deploy-webhook', sanitize_text_field($_POST['github-actions-deploy-webhook']));
+
+ // check user capabilities
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+ // verify nonce & update options
+ if (isset($_POST['hookNonce']) && wp_verify_nonce($_POST['hookNonce'], 'saveUrlWebHook') ) {
+
+  // options to save
+$GADW_options = array(
+  'GADW_owner' => 'GADW_owner',
+  'GADW_repo' => 'GADW_repo',
+  'GADW_workflow_id' => 'GADW_workflow_id',
+  'GADW_access_token' => 'GADW_access
+_token',
+  'GADW_ref' => 'GADW_ref',
+);
+
+// sanitize and update options
+  foreach ($GADW_options as $option => $key) {
+  update_option($key, sanitize_text_field($_POST[$key])); 
+}
+
 ?>
 <div class="notice notice-success">
- <p>Webhook Saved</p>
+ <p>Data saved successfully.</p>
 </div>
 <?php }
- else { 
+
+else { 
   ?>
 <div class="notice notice-error">
  <p>Webhook not saved, you do not have permission to perform that action.</p>
@@ -235,15 +265,14 @@ $settingField = 'github-actions-deploy-webhook';
  <h2>Settings </h2>
  <?php if (isset($_POST['justsubmitted'])) $this->handleSubmitSaveOptions() ?>
  <hr>
- <form action="options.php" method="POST">
+ <h2><strong>Webhook URL Settings</strong></h2>
+ <p>Make sure to fill out the fields and save your changes. This data is necessary for the plugin to create the webhook.</p>
+
+ <form action="" method="POST">
   <input type="hidden" name="justsubmitted" value="true">
   <?php wp_nonce_field('saveUrlWebHook','hookNonce') ?>
 
   <div class="gawdp_flex-container">
-   <div class="gawdp_flex-item">
-    <p class="gawdp_input-label">Fill out the fields and save your changes.</p>
-
-   </div>
    <?php
    $settingField = 'GADW_webhook-settings';
    $pageSlug= 'github-actions-deploy-webhook-settings-page';
@@ -254,6 +283,26 @@ $settingField = 'github-actions-deploy-webhook';
    ?>
   </div>
  </form>
+
+ <hr>
+ <div class="gawdp_flex-item">
+  <h2><strong>Quick Reference</strong></h2>
+  <ul class="gawdp_list">
+   <li class="gawdp_list-item"><strong>OWNER: </strong>The username or organization name that owns the repository.</li>
+   <li class="gawdp_list-item"><strong>REPO: </strong>The name of the repository.</li>
+   <li class="gawdp_list-item"><strong>WORKFLOW_ID: </strong>You can either write the full name of your .yml file, ie. "manual-trigger-workflow.yml" or the ID of the workflow that you want to trigger. You can find the ID of a workflow by going to the "Actions" tab of your repository on GitHub, clicking on the name of the workflow, and looking at the URL of the page. The ID is the number that appears after the last forward slash in the URL.</li>
+   <li class="gawdp_list-item"><strong>YOUR_GITHUB_PERSONAL_ACCESS_TOKEN: </strong>A personal access token (PAT) with the repo scope. You can create a PAT by going to "Settings" > "Developer settings" > "Personal access tokens" in your GitHub account.
+   </li>
+   <li class="gawdp_list-item"><strong>REF: </strong>The name of your repository's main branch.
+   </li>
+  </ul>
+  <p class="gawdp_remark"><strong>Important: </strong>At the moment the plugin is able to create a webhook for a workflow_dispatch trigger without inputs. This feature is planned for later versions.</p>
+  <hr>
+  <h2 class="gawdp_extra-info"><strong>Extra Info</strong></h2>
+  <a href="https://github.com/NicolasdRa/github-actions-deploy-webhook-wordpress-plugin" class="">Plugin repository on Github</a>
+  <a href="https://docs.github.com/en/rest/webhooks?apiVersion=2022-11-28#repository-webhooks" class="gawdp_input-label">Github Actions Deploy Webhook Documentation</a>
+
+ </div>
 </div>
 <?php
 }
