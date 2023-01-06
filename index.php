@@ -1,7 +1,7 @@
 <?php
 
 /*
-Plugin Name: Github Actions Deploy Webhook
+Plugin Name: Deploy Webhook Github Actions
 Plugin URI: https://github.com/NicolasdRa/github-actions-deploy-webhook
 Description: WordPress plugin to manually trigger a Github Actions deploy workflow via a Webhook.
 
@@ -9,7 +9,7 @@ Version: 1.0.0
 Author: Nicolás di Rago
 Author URI: https://www.nicolasdirago.com
 License: GPLv3 or later
-Text Domain: github-actions-deploy-hooks
+Text Domain: deploy-hook-github-actions
 */
 
 /*
@@ -81,14 +81,14 @@ foreach ($settingsFields as $field) {
 
 // creates the top level menu and submenus
 function makeTopLevelMenu() {
-$documentTitle = 'Github Actions Deploy Webhook';
+$documentTitle = 'Deploy Webhook Github Actions';
 $menuLabel = 'GA Deploy';
 $capability = 'manage_options';
 $menuSlug = 'github-actions-deploy-webhook';
 $mainPageHTML = array($this, 'mainPageHTML');
 $iconUrl = 'dashicons-cloud';
 $position = 110;
-$subMenuDocumentTitle = 'Github Actions Deploy Webhook Options';
+$subMenuDocumentTitle = 'Deploy Webhook Github Actions Options';
 $subMenuLabel = 'Settings';
 $subMenuSlug= 'github-actions-deploy-webhook-options';
 $optionsSubPageHTML = array($this, 'optionsSubPageHTML');
